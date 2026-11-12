@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>H3 Studio</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark">H<span>3</span></span><div><strong>H3 Studio <span class="version">1.5.3</span></strong><small>远端图像编辑</small></div></div>
+  <div class="connection-info"><span id="connectionDot" class="dot"></span><span id="connectionStatus">尚未连接 Colab</span><button id="copyDeployButton" class="quiet-button">拷贝部署脚本</button><button id="startRemoteButton" class="quiet-button">启动远端 ↗</button><button id="connectionButton" class="quiet-button">连接设置</button></div>
+</header>
+<main>
+  <section class="references-panel">
+    <div class="section-top"><h1>参考图</h1><span>PNG / JPEG / WebP · 每张最多 30 MB</span></div>
+    <div class="attachment-grid" id="attachments"></div>
+  </section>
+  <div class="studio-grid">
+    <aside class="controls">
+      <div class="controls-heading"><h2>编辑指令</h2><span class="model-tag">MiniMax H3 Image</span></div>
+      <label class="sr-only" for="instructions">补充编辑指令</label>
+      <textarea id="instructions" placeholder="描述想生成的画面，或说明要如何修改参考图。"></textarea>
+      <p class="helper">启用参考图后会自动生成对应指令，可在这里补充细节。</p>
+      <div class="divider"></div>
+      <label class="field-label" for="resolution">画幅</label>
+      <select id="resolution"><option value="2048,2048">方形 · 2048 × 2048</option><option value="1728,2432">竖版 · 1728 × 2432</option><option value="2432,1728">横版 · 2432 × 1728</option></select>
+      <label class="field-label seed-label" for="seed">种子 <span>留空使用随机值</span></label>
+      <input id="seed" inputmode="numeric" placeholder="随机" aria-label="种子">
+      <div class="sampling"><span>6 步</span><span>CFG 1</span><span>W4A8</span></div>
+      <div class="generate-area"><button id="generateButton" class="primary" disabled>生成图像 <span>↗</span></button><div id="actionHint" class="action-hint">连接远端后开始</div></div>
+      <div class="quota"><div><span>剩余计算单元 · 估算</span><strong id="balance">—</strong></div><small id="balanceDetail">连接后读取远端余额基准</small>
+        <details id="balanceSettings"><summary>校准余额 / 费率</summary><form id="balanceForm">
+          <label for="balanceInput">Colab 当前余额</label><input id="balanceInput" type="number" min="0" step="any" required>
+          <label for="rateInput">每小时消耗</label><input id="rateInput" type="number" min="0" step="any" required>
+          <button id="saveBalanceButton" type="submit" class="quiet-button" disabled>保存到远端</button>
+          <button id="officialBalanceButton" type="button" class="quiet-button">查看 Colab 官方余额 ↗</button>
+          <small id="balanceMessage" role="status"></small>
+        </form></details></div>
+    </aside>
+    <section class="result-panel">
+      <div class="result-toolbar"><h2>远端结果</h2><div class="result-actions"><button id="syncButton" class="quiet-button" disabled>同步远端结果</button><button id="previousResult" class="quiet-button" aria-label="较新的远端结果" hidden>‹</button><span id="resultIndex" hidden></span><button id="nextResult" class="quiet-button" aria-label="较早的远端结果" hidden>›</button><button id="undoDeleteButton" class="quiet-button" hidden>撤销删除</button><button id="deleteResultButton" class="quiet-button danger" hidden>删除远端结果</button><button id="zoomOpenButton" class="quiet-button" hidden>放大查看</button><button id="compareButton" class="quiet-button" hidden>查看原图</button><button id="copyButton" class="quiet-button" hidden>拷贝</button><button id="saveButton" class="quiet-button" hidden>保存图片 ↓</button></div></div>
+      <div id="resultStage" class="result-stage">
+        <div id="emptyState" class="empty-state"><span class="empty-frame"><i></i></span><h3>你的下一张画面</h3><p>输入提示词生成，或添加图片进行参考编辑。</p></div>
+        <img id="resultImage" alt="编辑结果" hidden>
+        <div id="processing" class="processing" hidden><span class="spinner"></span><strong id="processingStatus">正在连接远端</strong><span id="elapsed"></span></div>
+      </div>
+      <div class="result-footer"><span id="resultCaption">图片在远端 Colab 生成</span><span id="gpuInfo"></span></div>
+      <div id="errorBox" class="error-box" role="alert" hidden></div>
+    </section>
+  </div>
+</main>
+<dialog id="viewerDialog">
+  <div class="viewer-toolbar"><strong>图片查看</strong><div><button id="zoomOut" aria-label="缩小图片">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="放大图片">+</button><button id="zoomFit">适应窗口</button><button id="viewerCopy">拷贝</button><button id="viewerSave">保存</button><button id="closeViewer" aria-label="关闭图片查看">×</button></div></div>
+  <div id="viewerStage"><img id="viewerImage" alt="放大查看的远端结果"></div>
+  <div class="viewer-hint">滚轮缩放 · 拖动平移 · 双击适应窗口</div>
+</dialog>
+<dialog id="connectionDialog">
+  <form id="connectionForm">
+    <div class="dialog-heading"><div><h2>连接到 Colab</h2></div><button type="button" id="closeConnection" class="close-dialog" aria-label="关闭连接设置">×</button></div>
+    <p class="dialog-copy">使用启动邮件中的公网地址和密码。密码仅用于本次应用会话。</p>
+    <label for="remoteURL">远端地址</label><input id="remoteURL" type="url" placeholder="https://你的地址.trycloudflare.com" required spellcheck="false" autocomplete="off">
+    <div class="login-grid"><div><label for="username">用户名</label><input id="username" value="comfy" required autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div><div><label for="password">密码</label><input id="password" type="password" placeholder="邮件中的密码" required autocomplete="off"></div></div>
+    <div class="connection-help"><button type="button" id="notebookButton">打开 Colab ↗</button><button type="button" id="newNotebookButton">新建自己的 Colab ↗</button><button type="button" id="mailButton">查看登录邮件 ↗</button></div>
+    <p class="notebook-instructions">默认从空白 Colab 部署。点击“启动远端”会拷贝完整部署脚本并打开新笔记本，粘贴到自己的 Colab 代码单元格，选择 GPU 后运行。运行时填写 Gmail 邮箱；优先读取已授权的 COMFY_GMAIL_APP_PASSWORD，缺少时会显示生成链接和隐藏密码输入框。登录信息将发送至该邮箱。</p>
+    <details class="mail-guide"><summary>如何生成 Gmail 应用专用密码？</summary><ol>
+      <li>登录收件邮箱对应的 Google 账号，<a href="https://myaccount.google.com/signinoptions/two-step-verification">开启两步验证 ↗</a>。</li>
+      <li>打开 <a href="https://myaccount.google.com/apppasswords">Google 应用专用密码 ↗</a>，必要时重新登录。</li>
+      <li>应用名称填写“H3 Studio”，点击“创建”。</li>
+      <li>复制生成的 16 位密码，粘贴到 Colab 部署单元格的隐藏输入框并回车，空格会自动去除。</li>
+    </ol><p>可选长期配置：在 Colab Secret 中添加 COMFY_GMAIL_APP_PASSWORD，填入生成的密码，再开启笔记本访问权限。</p></details>
+    <p id="connectionError" class="connection-error" role="alert" hidden></p>
+    <button type="submit" class="primary" id="connectSubmit">连接远端 <span>→</span></button>
+  </form>
+</dialog>
+<div id="toast" role="status" hidden></div><script src="app.js"></script>
+</body></html>
